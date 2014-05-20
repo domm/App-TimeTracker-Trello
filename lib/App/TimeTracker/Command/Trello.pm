@@ -10,8 +10,8 @@ our $VERSION = "1.000";
 
 use Moose::Role;
 use WWW::Trello::Lite;
-
-# https://trello.com/1/authorize?key=KEY&name=tracker&expiration=1day&response_type=token&scope=read,write
+use JSON::XS qw(encode_json decode_json);
+use Path::Class;
 
 has 'trello' => (
     is            => 'rw',
@@ -21,7 +21,7 @@ has 'trello' => (
 );
 
 has 'trello_client' => (
-    is         => 'ro',
+    is         => 'rw',
     isa        => 'Maybe[WWW::Trello::Lite]',
     lazy_build => 1,
     traits     => ['NoGetopt'],
@@ -46,8 +46,10 @@ sub _build_trello_client {
     my $self   = shift;
     my $config = $self->config->{trello};
 
-    unless ($config) {
-        error_message("Please configure Trello in your TimeTracker config");
+    unless ( $config->{key} && $config->{token} ) {
+        error_message(
+            "Please configure Trello in your TimeTracker config or run 'tracker setup_trello'"
+        );
         return;
     }
     return WWW::Trello::Lite->new(
@@ -79,17 +81,12 @@ before [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
     my $card = $self->trello_card;
     return unless $card;
 
-    if ( $self->trello_client ) {
-        my $card = $self->trello_card;
-        if ( defined $card ) {
-            $name = $self->_trello_just_the_name($card);
-            if ( defined $self->description ) {
-                $self->description( $self->description . ' ' . $name );
-            }
-            else {
-                $self->description($name);
-            }
-        }
+    $name = $self->_trello_just_the_name($card);
+    if ( defined $self->description ) {
+        $self->description( $self->description . ' ' . $name );
+    }
+    else {
+        $self->description($name);
     }
 
     if ( $self->meta->does_role('App::TimeTracker::Command::Git') ) {
@@ -97,7 +94,7 @@ before [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
         if ($name) {
             $branch .= '_' . $self->safe_branch_name($name);
         }
-        $self->branch(lc($branch)) unless $self->branch;
+        $self->branch( lc($branch) ) unless $self->branch;
     }
 };
 
@@ -106,11 +103,14 @@ after [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
     return unless $self->has_trello_card;
 
     my $card = $self->trello_card;
+    return unless $card;
 
     if ( my $lists = $self->_trello_fetch_lists ) {
         if ( $lists->{doing} ) {
-            unless ( $card->{idList} eq $lists->{doing}->{id} ) {
-                $self->trello_client->put(
+            if (  !$card->{idList}
+                || $card->{idList} ne $lists->{doing}->{id} ) {
+                $self->_do_trello(
+                    'put',
                     'cards/' . $card->{id} . '/idList',
                     { value => $lists->{doing}->{id} }
                 );
@@ -122,7 +122,8 @@ after [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
         unless ( grep { $_ eq $member_id } @{ $card->{idMembers} } ) {
             my $members = $card->{idMembers};
             push( @$members, $member_id );
-            $self->trello_client->put(
+            $self->_do_trello(
+                'put',
                 'cards/' . $card->{id} . '/idMembers',
                 { value => join( ',', @$members ) }
             );
@@ -161,24 +162,181 @@ after 'cmd_stop' => sub {
         $update{name} = $name;
     }
 
-    if ( my $move_to = $self->move_to ) {
-        if ( my $lists = $self->_trello_fetch_lists ) {
-            if ( $lists->{$move_to} ) {
-                $update{idList} = $lists->{$move_to}->{id};
+    if ( $self->can('move_to') ) {
+        if ( my $move_to = $self->move_to ) {
+            if ( my $lists = $self->_trello_fetch_lists ) {
+                if ( $lists->{$move_to} ) {
+                    $update{idList} = $lists->{$move_to}->{id};
+                }
+                else {
+                    warning_message("Could not find list >$move_to<");
+                }
             }
             else {
-                warning_message("Could not find list >$move_to<");
+                warning_message("Could not load lists");
             }
-        }
-        else {
-            warning_message("Could not load lists");
         }
     }
 
     return unless keys %update;
 
-    $self->trello_client->put( 'cards/' . $card->{id}, \%update );
+    $self->_do_trello( 'put', 'cards/' . $card->{id}, \%update );
 };
+
+sub _load_attribs_setup_trello {
+    my ( $class, $meta ) = @_;
+
+    $meta->add_attribute(
+        'token_expiry' => {
+            isa => 'Str',
+            is  => 'ro',
+            documentation =>
+                'Trello token expiry [1hour, 1day, 30days, never]',
+            default => '1day',
+        }
+    );
+}
+
+sub cmd_setup_trello {
+    my $self = shift;
+
+    my $conf = $self->config->{trello};
+    my %global;
+    my %local;
+    if ( $conf->{key} ) {
+        say "Trello Key is already set.";
+    }
+    else {
+        say
+            "Please open this URL in your favourite browser, and paste the Key:\nhttps://trello.com/1/appKey/generate";
+        my $key = <STDIN>;
+        $key =~ s/\s+//;
+        $conf->{key} = $global{key} = $key;
+        print "\n\n";
+    }
+
+    if ( $conf->{token} ) {
+        my $token_info =
+            $self->_do_trello( 'get', 'tokens/' . $conf->{token} );
+        if ( $token_info->{dateExpires} ) {
+            say "Token valid until: " . $token_info->{dateExpires};
+        }
+        else {
+            say "Token no longer valid";
+            delete $conf->{token};
+        }
+    }
+    unless ( $conf->{token} ) {
+        my $get_token_url =
+              'https://trello.com/1/authorize?key='
+            . $conf->{key}
+            . '&name=App::TimeTracker&expiration='
+            . $self->token_expiry
+            . '&response_type=token&scope=read,write';
+        say
+            "Please open this URL in your favourite browser, click 'Allow', and paste the token:\n$get_token_url";
+
+        my $token = <STDIN>;
+        $token =~ s/\s+//;
+
+        $conf->{token} = $global{token} = $token;
+        if ( $self->has_trello_client ) {
+            $self->trello_client->token($token);
+        }
+        else {
+            $self->trello_client( $self->_build_trello_client );
+        }
+        print "\n\n";
+    }
+    $self->config->{trello} = $conf;
+
+    if ( $conf->{member_id} ) {
+        say "member_id is already set.";
+    }
+    else {
+        $conf->{member_id} = $global{member_id} =
+            $self->_do_trello( 'get', 'members/me' )->{id};
+        say "Your member_id is " . $conf->{member_id};
+        print "\n\n";
+    }
+
+    if ( $conf->{board_id} ) {
+        say "board_id is already set.";
+    }
+    unless ( $conf->{board_id} ) {
+        print "Do you want to set a Board? [y/N] ";
+        my $in = <STDIN>;
+        $in =~ s/\s+//;
+        if ( $in =~ /^y/i ) {
+            say "Your Boards:";
+            my $boards = $self->_do_trello( 'get',
+                'members/' . $conf->{member_id} . '/boards' );
+            my $cnt = 1;
+            foreach (@$boards) {
+                printf( "%i: %s\n", $cnt, $_->{name} );
+                $cnt++;
+            }
+            print "Your selection (number or nothing to skip): ";
+            my $in = <STDIN>;
+            $in =~ s/\D//;
+            if ($in) {
+                $conf->{board_id} = $local{board_id} =
+                    $boards->[ $in - 1 ]->{id};
+            }
+        }
+    }
+
+    if ( keys %global ) {
+        $self->_trello_update_config( \%global,
+            $self->config->{_used_config_files}->[-1], 'global' );
+    }
+    if ( keys %local ) {
+        $self->_trello_update_config( \%local,
+            $self->config->{_used_config_files}->[0], 'local' );
+    }
+}
+
+sub _do_trello {
+    my ( $self, $method, $endpoint, @args ) = @_;
+    my $client = $self->trello_client;
+    exit 1 unless $client;
+
+    my $res = $client->$method( $endpoint, @args );
+    if ( $res->failed ) {
+        error_message(
+            "Cannot talk to Trello API: " . $res->error . ' ' . $res->code );
+        if ( $res->code == 401 ) {
+            say "Maybe running 'tracker setup_trello' will help...";
+        }
+        exit 1;
+    }
+    else {
+        return $res->data;
+    }
+}
+
+sub _trello_update_config {
+    my ( $self, $update, $file, $type ) = @_;
+
+    print "I will store the following keys\n\t"
+        . join( ', ', sort keys %$update )
+        . "\nin your $type config file\n$file\n";
+    print "(Y|n): ";
+    my $in = <STDIN>;
+    $in =~ s/\s+//;
+    unless ( $in =~ /^n/i ) {
+        my $f   = file($file);
+        my $old = JSON::XS->new->utf8->relaxed->decode(
+            scalar $f->slurp( iomode => '<:encoding(UTF-8)' ) );
+        while ( my ( $k, $v ) = each %$update ) {
+            $old->{trello}{$k} = $v;
+        }
+        $f->spew(
+            iomode => '>:encoding(UTF-8)',
+            JSON::XS->new->utf8->pretty->encode($old)
+        );
+    }
+}
 
 sub _trello_fetch_card {
     my ( $self, $trello_tag ) = @_;
@@ -189,15 +347,15 @@ sub _trello_fetch_card {
         $search{idBoards} = $board_id;
     }
 
-    my $result = $self->trello_client->get( "search", \%search )->data;
+    my $result = $self->_do_trello( 'get', 'search', \%search );
     my $cards = $result->{cards};
     unless ( @$cards == 1 ) {
         warning_message(
             "Could not identify trello card via '" . $trello_tag . "'" );
         return;
     }
-    my $id   = $cards->[0]{id};
-    my $card = $self->trello_client->get( 'cards/' . $id )->data;
+    my $id = $cards->[0]{id};
+    my $card = $self->_do_trello( 'get', 'cards/' . $id );
     return $card;
 }
 
@@ -205,8 +363,7 @@ sub _trello_fetch_lists {
     my $self     = shift;
     my $board_id = $self->config->{trello}{board_id};
     return unless $board_id;
-    my $rv =
-        $self->trello_client->get( 'boards/' . $board_id . '/lists' )->data;
+    my $rv = $self->_do_trello( 'get', 'boards/' . $board_id . '/lists' );
 
     my %lists;
     my $map = $self->config->{trello}{list_map}
@@ -268,7 +425,9 @@ add a hash named C<trello>, containing the following keys:
 
 =head3 key [REQUIRED]
 
-Your Trello Developer Key. Get it from L<https://trello.com/1/appKey/generate>
+Your Trello Developer Key. Get it from
+L<https://trello.com/1/appKey/generate> or via C<tracker
+setup_trello>.
 
 =head3 token [REQUIRED]
 
@@ -276,29 +435,36 @@ Your access token. Get it from
 L<https://trello.com/1/authorize?key=YOUR_DEV_KEY&name=tracker&expiration=1day&response_type=token&scope=read,write>.
 You maybe want to set a longer expiration timeframe.
 
-I will probably add some commands to this plugin to make getting the token easier.
+You can also get it via C<tracker setup_trello>.
 
 =head3 board_id [SORT OF REQUIRED]
 
 The C<board_id> of the board you want to use.
 
-Not stictly necessary, as we use fake ids to identify cards. But if you don't specify the C<board_id> the search for those ids will be global over all your boards, so you would have to make sure to not use the same id more than once in all those boards.
+Not stictly necessary, as we use fake ids to identify cards. But if
+you don't specify the C<board_id> the search for those ids will be
+global over all your boards, so you would have to make sure to not use
+the same id more than once in all those boards.
 
 If you specify the C<board_id>, C<tracker> will only search in this board.
 
-You can get the C<board_id> by going to "Share, print and export" in the sidebar menu, click "Export JSON" and then find the C<id> in the toplevel hash.
+You can get the C<board_id> by going to "Share, print and export" in
+the sidebar menu, click "Export JSON" and then find the C<id> in the
+toplevel hash. Or run C<tracker setup_trello>.
 
 =head3 member_id
 
 Your trello C<member_id>.
 
-Needed for adding you to a Card's list of members. Currently a bit hard to get from trello...
+Needed for adding you to a Card's list of members. Currently a bit
+hard to get from trello, so use C<tracker setup_trello>.
 
 =head3 update_time_worked
 
 If set, updates the time worked on this task on the Trello Card.
 
-As Trello does not provide time-tracking (yet?), we store the time-worked in some simple markup in the Card name:
+As Trello does not provide time-tracking (yet?), we store the
+time-worked in some simple markup in the Card name:
 
   Callibrate FluxCompensator [w:32m]
 
@@ -306,7 +472,28 @@ C<[w:32m]> means that you worked 32 minutes on the task.
 
 =head1 NEW COMMANDS
 
-none yet
+=head2 setup_trello
+
+    ~/perl/Your-Project$ tracker setup_trello
+
+This will launch an interactive process that walks you throught the setup.
+
+Depending on your config, you will be pointed to URLs to get your
+C<key>, C<token> and C<member_id>. You can also set up a C<board_id>.
+The data will be stored in your global / local config.
+
+You will need a web browser to access the URLs on trello.com.
+
+=head3 --token_expiry [1hour, 1day, 30days, never]
+
+Token expiry time when a new token is requested from trello. Defaults
+to '1day'.
+
+'never' is the most comfortable option, but of course also the most
+insecure.
+
+Please note that you can always invalidate tokens via trello.com (go
+to Settings/Applications)
 
 =head1 CHANGES TO OTHER COMMANDS
 
@@ -338,7 +525,10 @@ If C<--trello> is set and we can find a matching card:
 
 =item * If <update_time_worked> is set in config, adds the time worked on this task to the Card.
 
-=item * If --move_to is specified and a matching list is found in C<list_map> in config, move the Card to this list.
-
 =back
+
+=head3 --move_to
+
+If --move_to is specified and a matching list is found in C<list_map> in config, move the Card to this list.
+
 
