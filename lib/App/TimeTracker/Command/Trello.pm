@@ -211,7 +211,7 @@ sub cmd_setup_trello {
         my $key = <STDIN>;
         $key =~ s/\s+//;
         $conf->{key} = $global{key} = $key;
-        print "\n\n";
+        print "\n";
     }
 
     if ( $conf->{token} ) {
@@ -246,7 +246,7 @@ sub cmd_setup_trello {
             $self->config->{trello} = $conf;
             $self->trello_client( $self->_build_trello_client );
         }
-        print "\n\n";
+        print "\n";
     }
     $self->config->{trello} = $conf;
 
@@ -257,7 +257,7 @@ sub cmd_setup_trello {
         $conf->{member_id} = $global{member_id} =
             $self->_do_trello( 'get', 'members/me' )->{id};
         say "Your member_id is " . $conf->{member_id};
-        print "\n\n";
+        print "\n";
     }
 
     if ( $conf->{board_id} ) {
