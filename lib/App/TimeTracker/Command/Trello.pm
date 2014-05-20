@@ -25,7 +25,6 @@ has 'trello_client' => (
     isa        => 'Maybe[WWW::Trello::Lite]',
     lazy_build => 1,
     traits     => ['NoGetopt'],
-    predicate  => 'has_trello_client'
 );
 
 has 'trello_card' => (
@@ -238,12 +237,13 @@ sub cmd_setup_trello {
 
         my $token = <STDIN>;
         $token =~ s/\s+//;
-
         $conf->{token} = $global{token} = $token;
-        if ( $self->has_trello_client ) {
+
+        if ( $self->trello_client ) {
             $self->trello_client->token($token);
         }
         else {
+            $self->config->{trello} = $conf;
             $self->trello_client( $self->_build_trello_client );
         }
         print "\n\n";
