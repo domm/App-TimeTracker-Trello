@@ -97,7 +97,7 @@ before [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
         if ($name) {
             $branch .= '_' . $self->safe_branch_name($name);
         }
-        $self->branch($branch) unless $self->branch;
+        $self->branch(lc($branch)) unless $self->branch;
     }
 };
 
@@ -250,80 +250,95 @@ __END__
 This plugin takes a lot of hassle out of working with Trello
 L<http://trello.com/>.
 
-It can set the description and tags of the current task based on data
-entered into RT, set the owner of the ticket and update the
-time-worked as well as time-left in RT. If you also use the C<Git> plugin, this plugin will
-generate very nice branch names based on RT information.
+Using the Trello plugin, tracker can fetch the name of a Card and use
+it as the task's description; generate a nicely named C<git> branch
+(if you're also using the C<Git> plugin); add the user as a member to
+the Card; move the card to various lists; and use some hackish
+extension to the Card name to store the time-worked in the Card.
 
 =head1 CONFIGURATION
 
 =head2 plugins
 
-Add C<RT> to the list of plugins. 
+Add C<Trello> to the list of plugins. 
 
-=head2 rt
+=head2 trello
 
-add a hash named C<rt>, containing the following keys:
+add a hash named C<trello>, containing the following keys:
 
-=head3 server [REQUIRED]
+=head3 key [REQUIRED]
 
-The server name RT is running on.
+Your Trello Developer Key. Get it from L<https://trello.com/1/appKey/generate>
 
-=head3 username [REQUIRED]
+=head3 token [REQUIRED]
 
-Username to connect with. As the password of this user might be distributed on a lot of computer, grant as little rights as needed.
+Your access token. Get it from
+L<https://trello.com/1/authorize?key=YOUR_DEV_KEY&name=tracker&expiration=1day&response_type=token&scope=read,write>.
+You maybe want to set a longer expiration timeframe.
 
-=head3 password [REQUIRED]
+I will probably add some commands to this plugin to make getting the token easier.
 
-Password to connect with.
+=head3 board_id [SORT OF REQUIRED]
 
-=head3 timeout
+The C<board_id> of the board you want to use.
 
-Time in seconds to wait for an connection to be established. Default: 300 seconds (via RT::Client::REST)
+Not stictly necessary, as we use fake ids to identify cards. But if you don't specify the C<board_id> the search for those ids will be global over all your boards, so you would have to make sure to not use the same id more than once in all those boards.
 
-=head3 set_owner_to
+If you specify the C<board_id>, C<tracker> will only search in this board.
 
-If set, set the owner of the current ticket to the specified value during C<start> and/or C<stop>.
+You can get the C<board_id> by going to "Share, print and export" in the sidebar menu, click "Export JSON" and then find the C<id> in the toplevel hash.
+
+=head3 member_id
+
+Your trello C<member_id>.
+
+Needed for adding you to a Card's list of members. Currently a bit hard to get from trello...
 
 =head3 update_time_worked
 
-If set, updates the time worked on this task also in RT.
+If set, updates the time worked on this task on the Trello Card.
 
-=head3 update_time_left
+As Trello does not provide time-tracking (yet?), we store the time-worked in some simple markup in the Card name:
 
-If set, updates the time left property on this task also in RT using the time worked tracker value.
+  Callibrate FluxCompensator [w:32m]
+
+C<[w:32m]> means that you worked 32 minutes on the task.
 
 =head1 NEW COMMANDS
 
-none
+none yet
 
 =head1 CHANGES TO OTHER COMMANDS
 
 =head2 start, continue
 
-=head3 --rt
+=head3 --trello
 
-    ~/perl/Your-Project$ tracker start --rt 1234
+    ~/perl/Your-Project$ tracker start --trello t123
 
-If C<--rt> is set to a valid ticket number:
+If C<--trello> is set and we can find a matching card:
 
 =over
 
-=item * set or append the ticket subject in the task description ("Rev up FluxCompensator!!")
+=item * set or append the Card name in the task description ("Rev up FluxCompensator!!")
 
-=item * add the ticket number to the tasks tags ("RT1234")
+=item * add the Card FakeID to the tasks tags ("trello:t123")
 
-=item * if C<Git> is also used, determine a save branch name from the ticket number and subject, and change into this branch ("RT1234_rev_up_fluxcompensator")
+=item * if C<Git> is also used, determine a save branch name from the Card name, and change into this branch ("t123_rev_up_fluxcompensator")
 
-=item * set the owner of the ticket in RT (if C<set_owner_to> is set in config)
+=item * add member to list of members (if C<member_id> is set in config)
 
-=item * updates the status of the ticket in RT (if C<set_status/start> is set in config)
+=item * move to C<Doing> list (if there is such a list, or another list is defined in C<list_map> in config)
 
 =back
 
 =head2 stop
 
-If <update_time_worked> is set in config, adds the time worked on this task to the ticket.
-If <update_time_left> is set in config, reduces the time left on this task to the ticket.
-If <set_status/stop> is set in config, updates the status of the ticket
+=over
+
+=item * If <update_time_worked> is set in config, adds the time worked on this task to the Card.
+
+=item * If --move_to is specified and a matching list is found in C<list_map> in config, move the Card to this list.
+
+=back
 
