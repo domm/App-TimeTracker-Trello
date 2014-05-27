@@ -215,8 +215,7 @@ sub cmd_setup_trello {
     }
 
     if ( $conf->{token} ) {
-        my $token_info =
-            $self->_do_trello( 'get', 'tokens/' . $conf->{token} );
+        my $token_info = $self->trello_client->get('tokens/' . $conf->{token})->data;
         if ( $token_info->{dateExpires} ) {
             say "Token valid until: " . $token_info->{dateExpires};
         }
