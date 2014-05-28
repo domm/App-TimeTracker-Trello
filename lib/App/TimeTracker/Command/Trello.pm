@@ -132,13 +132,19 @@ after [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
 
 after 'cmd_stop' => sub {
     my $self = shift;
-    return unless $self->has_trello;
 
     my $task = $self->_previous_task;
     return unless $task;
+
+    if (!$self->has_trello) {
+        my $oldid = $task->trello_card_id;
+        $self->trello($oldid) if $oldid;
+    }
+    return unless $self->has_trello;
+
     my $task_rounded_minutes = $task->rounded_minutes;
 
-    my $card = $self->_trello_fetch_card( $task->trello_card_id );
+    my $card = $self->_trello_fetch_card( $self->trello );
 
     unless ($card) {
         warning_message(
