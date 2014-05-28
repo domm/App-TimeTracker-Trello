@@ -1,5 +1,10 @@
 Revision history for App::TimeTracker-Trello
 
+1.001   2014-05-27T15:58:00+0200
+    - depend on A:TT 2.020
+    - fixed setup of token if we have an invalid token
+
+
 1.000   2014-05-20T12:40:26+0200
     - initial commit & first version
 
