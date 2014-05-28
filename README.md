@@ -3,6 +3,8 @@ App-TimeTracker-Trello
 
 App::TimeTracker Trello plugin
 
+http://timetracker.plix.at
+
 http://trello.com
 
 Using the Trello plugin, `tracker` can fetch the name of a Card and use
