@@ -6,7 +6,7 @@ use 5.010;
 # ABSTRACT: App::TimeTracker Trello plugin
 use App::TimeTracker::Utils qw(error_message warning_message);
 
-our $VERSION = "1.001";
+our $VERSION = "1.002";
 
 use Moose::Role;
 use WWW::Trello::Lite;

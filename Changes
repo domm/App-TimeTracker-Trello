@@ -1,5 +1,11 @@
 Revision history for App::TimeTracker-Trello
 
+1.002
+    - fixed _trello_just_the_name so we now have proper branch names
+    - properly load trello id from prev task so stop works without
+      specifiying --trello $ID
+
+
 1.001   2014-05-27T15:58:00+0200
     - depend on A:TT 2.020
     - fixed setup of token if we have an invalid token
