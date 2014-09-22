@@ -172,6 +172,7 @@ after 'cmd_stop' => sub {
             if ( my $lists = $self->_trello_fetch_lists ) {
                 if ( $lists->{$move_to} ) {
                     $update{idList} = $lists->{$move_to}->{id};
+                    $update{pos} = 'top';
                 }
                 else {
                     warning_message("Could not find list >$move_to<");
