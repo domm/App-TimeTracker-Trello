@@ -91,7 +91,7 @@ before [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
     if ( $self->meta->does_role('App::TimeTracker::Command::Git') ) {
         my $branch = $self->trello;
         if ($name) {
-            $branch .= '_' . $self->safe_branch_name($name);
+            $branch = $self->safe_branch_name($name) . '_' . $branch;
         }
         $self->branch( lc($branch) ) unless $self->branch;
     }
@@ -347,8 +347,7 @@ sub _trello_update_config {
 sub _trello_fetch_card {
     my ( $self, $trello_tag ) = @_;
 
-    my %search = ( query => $trello_tag, card_fields => 'name' );
-
+    my %search = ( query => $trello_tag, card_fields => 'shortLink', modelTypes=>'cards' );
     if ( my $board_id = $self->config->{trello}{board_id} ) {
         $search{idBoards} = $board_id;
     }
