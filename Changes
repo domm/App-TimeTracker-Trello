@@ -1,6 +1,10 @@
-Revision history for App::TimeTracker-Trello
+Revision history for App::TimeTracker::Command::Trello
 
-1.002
+1.003
+
+
+
+1.002   2014-05-28T23:15:52+0200
     - fixed _trello_just_the_name so we now have proper branch names
     - properly load trello id from prev task so stop works without
       specifiying --trello $ID
