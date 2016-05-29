@@ -6,7 +6,7 @@ use 5.010;
 # ABSTRACT: App::TimeTracker Trello plugin
 use App::TimeTracker::Utils qw(error_message warning_message);
 
-our $VERSION = "1.002";
+our $VERSION = "1.003";
 
 use Moose::Role;
 use WWW::Trello::Lite;
@@ -136,16 +136,12 @@ after 'cmd_stop' => sub {
     my $task = $self->_previous_task;
     return unless $task;
 
-    if (!$self->has_trello) {
-        my $oldid = $task->trello_card_id;
-        $self->trello($oldid) if $oldid;
-    }
-    return unless $self->has_trello;
+    my $oldid = $task->trello_card_id;
+    return unless $oldid;
 
     my $task_rounded_minutes = $task->rounded_minutes;
 
-    my $card = $self->_trello_fetch_card( $self->trello );
-
+    my $card = $self->_trello_fetch_card( $oldid );
     unless ($card) {
         warning_message(
             "Last task did not contain a trello id, not updating time etc.");
