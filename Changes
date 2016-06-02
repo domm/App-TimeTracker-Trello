@@ -1,7 +1,10 @@
 Revision history for App::TimeTracker::Command::Trello
 
-1.003
-
+1.003   2016-06-02T16:24:41+0200
+    - extract card id from full card url (Thomas Klausner)
+    - bugfix: update the previous card with time-worked when starting a new task (Thomas Klausner)
+    - use shortLink to identify trello cards (Thomas Klausner)
+    - move cards to top of list (Thomas Klausner)
 
 
 1.002   2014-05-28T23:15:52+0200
