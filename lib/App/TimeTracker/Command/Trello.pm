@@ -57,6 +57,18 @@ sub _build_trello_client {
     );
 }
 
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+
+    my %args = @_;
+    if ($args{trello} && $args{trello} =~ /^https/) {
+        $args{trello}=~m|https://trello.com/c/([^/]+)/?|;
+        $args{trello}= $1;
+    }
+    return $class->$orig(%args);
+};
+
 after '_load_attribs_stop' => sub {
     my ( $class, $meta ) = @_;
 
