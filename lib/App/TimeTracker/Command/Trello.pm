@@ -6,7 +6,7 @@ use 5.010;
 # ABSTRACT: App::TimeTracker Trello plugin
 use App::TimeTracker::Utils qw(error_message warning_message);
 
-our $VERSION = "1.003";
+our $VERSION = "1.004";
 
 use Moose::Role;
 use WWW::Trello::Lite;
@@ -16,7 +16,7 @@ use Path::Class;
 has 'trello' => (
     is            => 'rw',
     isa           => 'Str',
-    documentation => 'Trello fake id',
+    documentation => 'Trello card id',
     predicate     => 'has_trello'
 );
 
@@ -432,7 +432,7 @@ extension to the Card name to store the time-worked in the Card.
 
 =head2 plugins
 
-Add C<Trello> to the list of plugins. 
+Add C<Trello> to the list of plugins.
 
 =head2 trello
 
@@ -456,10 +456,7 @@ You can also get it via C<tracker setup_trello>.
 
 The C<board_id> of the board you want to use.
 
-Not stictly necessary, as we use fake ids to identify cards. But if
-you don't specify the C<board_id> the search for those ids will be
-global over all your boards, so you would have to make sure to not use
-the same id more than once in all those boards.
+Not stictly necessary, as we use ids to identify cards.
 
 If you specify the C<board_id>, C<tracker> will only search in this board.
 
@@ -516,23 +513,29 @@ to Settings/Applications)
 
 =head3 --trello
 
-    ~/perl/Your-Project$ tracker start --trello t123
+    ~/perl/Your-Project$ tracker start --trello s1d7prUx
 
-If C<--trello> is set and we can find a matching card:
+    ~/perl/Your-Project$ tracker start --trello https://trello.com/c/s1d7prUx/card-title
+
+If C<--trello> is set and we can find a card with this id:
 
 =over
 
 =item * set or append the Card name in the task description ("Rev up FluxCompensator!!")
 
-=item * add the Card FakeID to the tasks tags ("trello:t123")
+=item * add the Card id to the tasks tags ("trello:s1d7prUx")
 
-=item * if C<Git> is also used, determine a save branch name from the Card name, and change into this branch ("t123_rev_up_fluxcompensator")
+=item * if C<Git> is also used, determine a save branch name from the Card name, and change into this branch ("rev_up_fluxcompensator_s1d7prUx")
 
 =item * add member to list of members (if C<member_id> is set in config)
 
 =item * move to C<Doing> list (if there is such a list, or another list is defined in C<list_map> in config)
 
 =back
+
+<C--trello> can either be the full URL of the card, or just the card
+id. If you don't have access to the URL, click the 'Share and more'
+link (rather hard to find in the bottom right corner of a card).
 
 =head2 stop
 
