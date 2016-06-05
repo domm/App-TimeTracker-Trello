@@ -487,7 +487,7 @@ hard to get from trello, so use C<tracker setup_trello>.
 
 =head3 update_time_worked
 
-If set, updates the time worked on this task on the Trello Card.
+If set to true, updates the time worked on this task on the Trello Card.
 
 As Trello does not provide time-tracking (yet?), we store the
 time-worked in some simple markup in the Card name:
@@ -495,6 +495,15 @@ time-worked in some simple markup in the Card name:
   Callibrate FluxCompensator [w:32m]
 
 C<[w:32m]> means that you worked 32 minutes on the task.
+
+Context: stopish commands
+
+=head3 listname_as_tag
+
+If set to true, will fetch the name of the list the current card
+belongs to and store the name as an additional tag.
+
+Context: startish commands
 
 =head1 NEW COMMANDS
 
@@ -550,6 +559,8 @@ If C<--trello> is set and we can find a card with this id:
 <C--trello> can either be the full URL of the card, or just the card
 id. If you don't have access to the URL, click the 'Share and more'
 link (rather hard to find in the bottom right corner of a card).
+
+If C<listname_as_tag> is set, will store the name of the card's list as a tag.
 
 =head2 stop
 
