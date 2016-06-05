@@ -62,9 +62,9 @@ around BUILDARGS => sub {
     my $class = shift;
 
     my %args = @_;
-    if ($args{trello} && $args{trello} =~ /^https/) {
-        $args{trello}=~m|https://trello.com/c/([^/]+)/?|;
-        $args{trello}= $1;
+    if ( $args{trello} && $args{trello} =~ /^https/ ) {
+        $args{trello} =~ m|https://trello.com/c/([^/]+)/?|;
+        $args{trello} = $1;
     }
     return $class->$orig(%args);
 };
@@ -92,7 +92,7 @@ before [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
     my $card = $self->trello_card;
     return unless $card;
 
-    if ($self->config->{trello}{listname_as_tag}) {
+    if ( $self->config->{trello}{listname_as_tag} ) {
         $self->_tag_listname($card);
     }
 
@@ -157,7 +157,7 @@ after 'cmd_stop' => sub {
 
     my $task_rounded_minutes = $task->rounded_minutes;
 
-    my $card = $self->_trello_fetch_card( $oldid );
+    my $card = $self->_trello_fetch_card($oldid);
     unless ($card) {
         warning_message(
             "Last task did not contain a trello id, not updating time etc.");
@@ -184,7 +184,7 @@ after 'cmd_stop' => sub {
             if ( my $lists = $self->_trello_fetch_lists ) {
                 if ( $lists->{$move_to} ) {
                     $update{idList} = $lists->{$move_to}->{id};
-                    $update{pos} = 'top';
+                    $update{pos}    = 'top';
                 }
                 else {
                     warning_message("Could not find list >$move_to<");
@@ -234,7 +234,8 @@ sub cmd_setup_trello {
     }
 
     if ( $conf->{token} ) {
-        my $token_info = $self->trello_client->get('tokens/' . $conf->{token})->data;
+        my $token_info =
+            $self->trello_client->get( 'tokens/' . $conf->{token} )->data;
         if ( $token_info->{dateExpires} ) {
             say "Token valid until: " . $token_info->{dateExpires};
         }
@@ -359,7 +360,11 @@ sub _trello_update_config {
 sub _trello_fetch_card {
     my ( $self, $trello_tag ) = @_;
 
-    my %search = ( query => $trello_tag, card_fields => 'shortLink', modelTypes=>'cards' );
+    my %search = (
+        query       => $trello_tag,
+        card_fields => 'shortLink',
+        modelTypes  => 'cards'
+    );
     if ( my $board_id = $self->config->{trello}{board_id} ) {
         $search{idBoards} = $board_id;
     }
@@ -409,7 +414,7 @@ sub _trello_just_the_name {
 }
 
 sub _tag_listname {
-    my ($self, $card) = @_;
+    my ( $self, $card ) = @_;
 
     my $list_id = $card->{idList};
     return unless $list_id;
