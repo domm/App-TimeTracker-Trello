@@ -92,6 +92,10 @@ before [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
     my $card = $self->trello_card;
     return unless $card;
 
+    if ($self->config->{trello}{listname_as_tag}) {
+        $self->_tag_listname($card);
+    }
+
     $name = $self->_trello_just_the_name($card);
     if ( defined $self->description ) {
         $self->description( $self->description . ' ' . $name );
@@ -402,6 +406,16 @@ sub _trello_just_the_name {
     $name =~ s/_$//;
     $name =~ s/^_//;
     return $name;
+}
+
+sub _tag_listname {
+    my ($self, $card) = @_;
+
+    my $list_id = $card->{idList};
+    return unless $list_id;
+    my $rv = $self->_do_trello( 'get', 'lists/' . $list_id . '/name' );
+    my $name = $rv->{_value};
+    $self->insert_tag($name) if $name;
 }
 
 sub App::TimeTracker::Data::Task::trello_card_id {
