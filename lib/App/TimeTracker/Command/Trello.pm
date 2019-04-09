@@ -60,8 +60,14 @@ sub _build_trello_client {
 around BUILDARGS => sub {
     my $orig  = shift;
     my $class = shift;
+    if (scalar @_ == 1) {
+        my $ref = shift(@_);
+        %args = %$ref;
+    }
+    else {
+        %args = @_;
+    }
 
-    my %args = @_;
     if ( $args{trello} && $args{trello} =~ /^https/ ) {
         $args{trello} =~ m|https://trello.com/c/([^/]+)/?|;
         $args{trello} = $1;
