@@ -60,6 +60,8 @@ sub _build_trello_client {
 around BUILDARGS => sub {
     my $orig  = shift;
     my $class = shift;
+    my %args;
+
     if (scalar @_ == 1) {
         my $ref = shift(@_);
         %args = %$ref;
