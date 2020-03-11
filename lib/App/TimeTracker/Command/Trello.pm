@@ -463,7 +463,7 @@ Add C<Trello> to the list of plugins.
 
 =head2 trello
 
-add a hash named C<trello>, containing the following keys:
+Add a hash named C<trello>, containing the following keys:
 
 =head3 key [REQUIRED]
 
@@ -483,20 +483,20 @@ You can also get it via C<tracker setup_trello>.
 
 The C<board_id> of the board you want to use.
 
-Not stictly necessary, as we use ids to identify cards.
+Not strictly necessary, as we use ids to identify cards.
 
 If you specify the C<board_id>, C<tracker> will only search in this board.
 
 You can get the C<board_id> by going to "Share, print and export" in
 the sidebar menu, click "Export JSON" and then find the C<id> in the
-toplevel hash. Or run C<tracker setup_trello>.
+top-level hash. Or run C<tracker setup_trello>.
 
 =head3 member_id
 
-Your trello C<member_id>.
+Your Trello C<member_id>.
 
 Needed for adding you to a Card's list of members. Currently a bit
-hard to get from trello, so use C<tracker setup_trello>.
+hard to get from Trello, so use C<tracker setup_trello>.
 
 =head3 update_time_worked
 
@@ -524,7 +524,7 @@ Context: startish commands
 
     ~/perl/Your-Project$ tracker setup_trello
 
-This will launch an interactive process that walks you throught the setup.
+This will launch an interactive process that walks you through the setup.
 
 Depending on your config, you will be pointed to URLs to get your
 C<key>, C<token> and C<member_id>. You can also set up a C<board_id>.
