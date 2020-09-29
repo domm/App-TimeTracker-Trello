@@ -6,7 +6,7 @@ use 5.010;
 # ABSTRACT: App::TimeTracker Trello plugin
 use App::TimeTracker::Utils qw(error_message warning_message);
 
-our $VERSION = "1.006";
+our $VERSION = "1.007";
 
 use Moose::Role;
 use WWW::Trello::Lite;
@@ -437,7 +437,8 @@ sub App::TimeTracker::Data::Task::trello_card_id {
 }
 
 no Moose::Role;
-1;
+
+q{ listening to: SarahBernhardt - langsam wiads wos }
 
 __END__
 
@@ -558,7 +559,7 @@ If C<--trello> is set and we can find a card with this id:
 
 =item * add the Card id to the tasks tags ("trello:s1d7prUx")
 
-=item * if C<Git> is also used, determine a save branch name from the Card name, and change into this branch ("rev_up_fluxcompensator_s1d7prUx")
+=item * if C<Git> is also used, determine a save branch name from idShort and the Card name, and change into this branch ("42_rev_up_fluxcompensator")
 
 =item * add member to list of members (if C<member_id> is set in config)
 
