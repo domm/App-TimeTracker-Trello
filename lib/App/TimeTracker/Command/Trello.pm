@@ -415,9 +415,6 @@ sub _trello_just_the_name {
     my $tr   = $self->trello;
     $name =~ s/$tr:\s?//;
     $name =~ s/\[(.*?)\]//g;
-    $name =~ s/\s+/_/g;
-    $name =~ s/_$//;
-    $name =~ s/^_//;
     return $name;
 }
 
