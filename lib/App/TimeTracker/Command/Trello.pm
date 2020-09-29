@@ -113,9 +113,9 @@ before [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
     }
 
     if ( $self->meta->does_role('App::TimeTracker::Command::Git') ) {
-        my $branch = $self->trello;
+        my $branch = $card->{idShort};
         if ($name) {
-            $branch = $self->safe_branch_name($name) . '_' . $branch;
+            $branch .= '_'.$self->safe_branch_name($name);
         }
         $self->branch( lc($branch) ) unless $self->branch;
     }
