@@ -429,7 +429,7 @@ sub _tag_listname {
     return unless $list_id;
     my $rv = $self->_do_trello( 'get', 'lists/' . $list_id . '/name' );
     my $name = $rv->{_value};
-    if ($name && $name !~ /^(todo|doing|done|review)$/) {
+    if ($name && $name !~ /^(todo|doing|done|review)$/i) {
         $self->insert_tag($name);
     }
 }
@@ -531,7 +531,7 @@ Context: stopish commands
 =head3 listname_as_tag
 
 If set to true, will fetch the name of the list the current card
-belongs to and store the name as an additional tag.
+belongs to and store the name as an additional tag, unless the list name matches C</^(todo|doing|done|review)$/i>
 
 Context: startish commands
 
