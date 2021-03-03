@@ -60,6 +60,13 @@ Your trello `member_id`.
 Needed for adding you to a Card's list of members. Currently a bit
 hard to get from trello, so use `tracker setup_trello`.
 
+### prefix
+
+Default: `trello:`
+
+Add this prefix to the card name when storing it as tag. Useful to
+discern regular tags from card name pseudo tags.
+
 ### update\_time\_worked
 
 If set to true, updates the time worked on this task on the Trello Card.
@@ -76,7 +83,7 @@ Context: stopish commands
 ### listname\_as\_tag
 
 If set to true, will fetch the name of the list the current card
-belongs to and store the name as an additional tag.
+belongs to and store the name as an additional tag, unless the list name matches `/^(todo|doing|done|review)$/i`
 
 Context: startish commands
 
