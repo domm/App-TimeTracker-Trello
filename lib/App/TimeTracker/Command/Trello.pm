@@ -1,12 +1,13 @@
 package App::TimeTracker::Command::Trello;
+
+# ABSTRACT: App::TimeTracker Trello plugin
+# VERSION
+
 use strict;
 use warnings;
 use 5.010;
 
-# ABSTRACT: App::TimeTracker Trello plugin
 use App::TimeTracker::Utils qw(error_message warning_message);
-
-our $VERSION = "1.007";
 
 use Moose::Role;
 use WWW::Trello::Lite;
