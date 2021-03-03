@@ -1,6 +1,8 @@
 Revision history for App::TimeTracker::Command::Trello
 
 {{$NEXT}}
+    - ignore some list names in listname_as_tag
+    - add prefix config option for pseudo tag
     - switch to Dist::Zilla::PluginBundle::Author::DOMM
 
 
