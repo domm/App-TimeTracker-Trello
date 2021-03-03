@@ -94,7 +94,8 @@ before [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
     my $self = shift;
     return unless $self->has_trello;
 
-    my $cardname = 'trello:' . $self->trello;
+    my $cardname = $self->_prefix.$self->trello;
+
     $self->insert_tag($cardname);
 
     my $name;
@@ -158,10 +159,12 @@ after [ 'cmd_start', 'cmd_continue', 'cmd_append' ] => sub {
 after 'cmd_stop' => sub {
     my $self = shift;
 
+    return unless $self->config->{trello}{update_time_worked} || ( $self->can('move_to') && $self->move_to);
+
     my $task = $self->_previous_task;
     return unless $task;
 
-    my $oldid = $task->trello_card_id;
+    my $oldid = $task->trello_card_id($self->_prefix);
     return unless $oldid;
 
     my $task_rounded_minutes = $task->rounded_minutes;
@@ -426,13 +429,21 @@ sub _tag_listname {
     return unless $list_id;
     my $rv = $self->_do_trello( 'get', 'lists/' . $list_id . '/name' );
     my $name = $rv->{_value};
-    $self->insert_tag($name) if $name;
+    if ($name && $name !~ /^(todo|doing|done|review)$/) {
+        $self->insert_tag($name);
+    }
+}
+
+sub _prefix {
+    my $self = shift;
+    return $self->config->{trello}{prefix} || 'trello:';
 }
 
 sub App::TimeTracker::Data::Task::trello_card_id {
-    my $self = shift;
+    my ($self, $prefix) = @_;
+
     foreach my $tag ( @{ $self->tags } ) {
-        next unless $tag =~ /^trello:(\w+)/;
+        next unless $tag =~ /^$prefix(.*)$/;
         return $1;
     }
 }
@@ -496,6 +507,13 @@ Your trello C<member_id>.
 
 Needed for adding you to a Card's list of members. Currently a bit
 hard to get from trello, so use C<tracker setup_trello>.
+
+=head3 prefix
+
+Default: C<trello:>
+
+Add this prefix to the card name when storing it as tag. Useful to
+discern regular tags from card name pseudo tags.
 
 =head3 update_time_worked
 
